@@ -1,0 +1,34 @@
+# ---- Python / entorno
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# ---- Configuración/secretos
+.env
+.env.*
+
+# ---- Editores / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- Logs
+*.log
+
+# ---- Datos locales (no versionar PDFs, índices, DBs, etc.)
+data/
+chroma/
+index/
+storage/
+*.sqlite*
+*.db
+
+# ---- Cachés de test/lint
+.pytest_cache/
+.mypy_cache/
