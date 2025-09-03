@@ -1,23 +1,48 @@
-@"
-.venv/
+# --- Python / FastAPI ---
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.pkl
 *.egg-info/
 dist/
 build/
-.env
-.env.*
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-*.log
-data/
-chroma/
-index/
-storage/
-*.sqlite*
-*.db
+.venv/
+venv/
+env/
+pip-wheel-metadata/
 .pytest_cache/
 .mypy_cache/
-"@ | Set-Content .gitignore
+.ruff_cache/
+.pytype/
+.tox/
+.coverage
+coverage.xml
+htmlcov/
+
+# --- IDE / SO ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Entornos / claves ---
+.env
+.env.*
+*.secret
+*.key
+
+# --- Datos locales del proyecto ---
+data/uploads/
+data/chroma/
+data/cache/
+logs/
+*.log
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Otros ---
+*.sqlite3
+*.db
