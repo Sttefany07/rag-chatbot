@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAG Chatbot</title>
+  <style>
+    :root{
+      --bg: #0b1020;
+      --panel: #121a33;
+      --panel-alt:#0f1730;
+      --text: #e7ebff;
+      --muted: #98a2c3;
+      --primary: #6ea8fe;
+      --accent: #a78bfa;
+      --border: rgba(255,255,255,0.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--text); line-height:1.5;
+    }
+    .wrap{max-width: 900px; margin: 28px auto; padding: 0 18px;}
+    h1{margin:0 0 12px 0}
+    .card{background: var(--panel); border:1px solid var(--border); border-radius: 16px; box-shadow: 0 6px 16px rgba(0,0,0,0.4); margin-bottom:18px;}
+    details.card summary{cursor:pointer; padding:14px; font-weight:600;}
+    form.ingest{ padding: 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .btn{
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border:0; padding:10px 18px; border-radius:14px; font-weight:700; color:#0b1020; cursor:pointer;
+    }
+    .btn:hover{filter:brightness(1.1)}
+    .small{ font-size:12px; color: var(--muted) }
+    .chat{ }
+    #messages{padding: 18px; display:flex; flex-direction:column; gap:14px; min-height: 40vh; max-height: 60vh; overflow:auto;}
+    .bubble{max-width: 80%; padding: 12px 14px; border-radius: 14px; border:1px solid var(--border); white-space: pre-wrap; word-wrap: break-word;}
+    .bubble.bot{ background: var(--panel-alt); align-self:flex-start; }
+    .bubble.user{ background: var(--primary); color:#9cabdd; align-self:flex-end; }
+    .sources{ margin-top:10px; padding:8px; border-radius:8px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); font-size: 13px }
+    .row{ display:flex; gap:10px; padding: 14px; border-top: 1px solid var(--border); }
+    #input{ flex:1; resize:vertical; border-radius: 10px; border:1px solid var(--border); padding:12px; background:#0e142a; color:var(--text);}
+    #send{ background: linear-gradient(135deg, var(--primary), var(--accent)); color:#0b1020; border:none; border-radius:10px; padding:0 18px; font-weight:600; cursor:pointer; }
+    #send:hover{filter:brightness(1.1)}
+  </style>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root{
+      --bg: #0b1020; --panel:#121a33; --panel-alt:#0f1730; --text:#e7ebff; --muted:#98a2c3; --primary:#6ea8fe; --accent:#a78bfa; --border:rgba(255,255,255,.08);
+      --ok:#34d399; --warn:#f59e0b; --error:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial; background:var(--bg); color:var(--text)}
+    .app{max-width:1200px; margin:24px auto; padding:0 16px}
+    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px}
+    header h1{margin:0; font-size:22px}
+    .status-badges{display:flex; gap:8px; align-items:center}
+    .badge{font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:var(--panel)}
+    .badge.ok{border-color:rgba(52,211,153,.4)}
+    .badge.off{border-color:rgba(239,68,68,.4); color:#ffb4b4}
+
+    .shell{display:grid; grid-template-columns: 280px 1fr; gap:14px}
+    @media (max-width: 860px){ .shell{grid-template-columns: 1fr} }
+
+    /* Sidebar (Historial) */
+    .sidebar{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px}
+    .sidebar header{display:flex; align-items:center; justify-content:space-between; margin:0 0 8px 0}
+    .sidebar h2{font-size:14px; margin:0}
+    .history-list{display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow:auto}
+    .history-item{display:flex; gap:8px; align-items:center; border:1px solid var(--border); background:var(--panel-alt); padding:10px; border-radius:10px; cursor:pointer}
+    .history-item.active{outline:2px solid rgba(110,168,254,.35)}
+    .history-item .title{font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .history-item .meta{font-size:11px; color:var(--muted)}
+    .history-actions{display:flex; gap:8px}
+    .btn{background:linear-gradient(135deg,var(--primary),var(--accent)); border:0; color:#0b1020; font-weight:700; padding:8px 12px; border-radius:10px; cursor:pointer}
+    .btn.secondary{background:#1a2448; color:var(--text); border:1px solid var(--border)}
+
+    /* Chat card */
+    .card{background:var(--panel); border:1px solid var(--border); border-radius:16px}
+    details.card summary{cursor:pointer; padding:14px; font-weight:600}
+    form.ingest{ padding:12px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+    .chat{display:flex; flex-direction:column; min-height:70vh}
+    #messages{padding:16px; display:flex; flex-direction:column; gap:12px; min-height:40vh; max-height:58vh; overflow:auto}
+    .bubble{max-width:80%; padding:12px 14px; border-radius:14px; border:1px solid var(--border); white-space:pre-wrap}
+    .bubble.bot{background:var(--panel-alt); align-self:flex-start}
+    .bubble.user{background:#1f2b55; align-self:flex-end}
+    .sources{ margin-top:8px; padding:8px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,.05); font-size:13px }
+    .composer{display:flex; gap:10px; padding:12px; border-top:1px solid var(--border)}
+    #input{flex:1; resize:vertical; border-radius:10px; border:1px solid var(--border); padding:12px; background:#0e142a; color:var(--text)}
+    #send{display:inline-flex; align-items:center; gap:8px}
+    #send svg{opacity:.9}
+    #status{padding:0 12px 12px 12px; font-size:12px; color:var(--muted)}
+    .typing{display:inline-flex; gap:4px; align-items:center}
+    .dot{width:7px; height:7px; border-radius:50%; background:var(--muted); opacity:.7; animation: bounce 1s infinite ease-in-out}
+    .dot:nth-child(2){animation-delay:.15s}
+    .dot:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>RAG Chatbot</h1>
+      <div class="status-badges">
+        <span id="netBadge" class="badge ok">Conectado</span>
+        <span id="liveBadge" class="badge">Listo</span>
+      </div>
+    </header>
+
+    <div class="shell">
+      <!-- Sidebar: Historial de conversaciones -->
+      <aside class="sidebar" aria-label="Historial de conversaciones">
+        <header>
+          <h2>Historial</h2>
+          <div class="history-actions">
+            <button id="newChat" class="btn secondary" title="Nuevo chat">Nuevo</button>
+            <button id="clearChat" class="btn secondary" title="Borrar chat actual">Borrar</button>
+          </div>
+        </header>
+        <div id="historyList" class="history-list"></div>
+      </aside>
+
+      <!-- Main: Ingest + Chat -->
+      <main>
+        <details class="card" open>
+          <summary>Ingestar PDF</summary>
+          <form id="ingestForm" class="ingest">
+            <input type="file" name="file" accept="application/pdf" required />
+            <button type="submit" class="btn">Subir</button>
+            <span id="ingestMsg" class="small" aria-live="polite"></span>
+          </form>
+        </details>
+
+        <section class="chat card" aria-live="polite" aria-label="Mensajes del chat">
+          <div id="messages"></div>
+          <div class="composer">
+            <textarea id="input" rows="3" placeholder="Escribe tu pregunta… (Shift+Enter = salto de línea)"></textarea>
+            <button id="send" class="btn" aria-label="Enviar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 4l16 8-16 8 4-8-4-8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              Enviar
+            </button>
+          </div>
+          <div id="status" class="small"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // ====== Estado de red ======
+    const netBadge = document.getElementById('netBadge');
+    function updateNet(){
+      const online = navigator.onLine;
+      netBadge.textContent = online ? 'Conectado' : 'Sin conexión';
+      netBadge.classList.toggle('ok', online);
+      netBadge.classList.toggle('off', !online);
+    }
+    window.addEventListener('online', updateNet);
+    window.addEventListener('offline', updateNet);
+    updateNet();
+
+    // ====== Historial (localStorage) ======
+    const storeKey = 'rag_history_v1';
+    const historyListEl = document.getElementById('historyList');
+    const newChatBtn = document.getElementById('newChat');
+    const clearChatBtn = document.getElementById('clearChat');
+
+    let sessions = JSON.parse(localStorage.getItem(storeKey) || '[]');
+    let currentId = sessions[0]?.id || null;
+    const history = [];
+
+    function uid(){ return 's_' + Math.random().toString(36).slice(2,9); }
+    function now(){ return new Date().toISOString(); }
+
+    function createSession(title='Nuevo chat'){
+      const s = { id: uid(), title, createdAt: now(), messages: [] };
+      sessions.unshift(s);
+      currentId = s.id;
+      persist();
+      renderHistory();
+      return s;
+    }
+
+    function persist(){ localStorage.setItem(storeKey, JSON.stringify(sessions)); }
+
+    function current(){ return sessions.find(x=>x.id===currentId) || null; }
+
+    function renderHistory(){
+      historyListEl.innerHTML = '';
+      sessions.forEach(sess=>{
+        const item = document.createElement('button');
+        item.className = 'history-item' + (sess.id===currentId?' active':'');
+        item.innerHTML = `<div class="title">${sess.title || 'Sin título'}</div><div class="meta">${new Date(sess.createdAt).toLocaleString()}</div>`;
+        item.onclick = ()=>{ currentId = sess.id; renderHistory(); loadSession(sess); };
+        historyListEl.appendChild(item);
+      });
+    }
+
+    function loadSession(sess){
+      const messagesEl = document.getElementById('messages');
+      messagesEl.innerHTML = '';
+      (sess.messages||[]).forEach(m=> addBubble(m.content, m.role==='user'?'user':'bot', m.sources));
+    }
+
+    newChatBtn.onclick = ()=>{
+      const s = createSession('Nuevo chat');
+      document.getElementById('messages').innerHTML='';
+    };
+
+    clearChatBtn.onclick = ()=>{
+      const s = current();
+      if(!s) return;
+      s.messages = [];
+      persist();
+      document.getElementById('messages').innerHTML='';
+    };
+
+    // Inicializa si no hay sesión
+    if(!currentId){ createSession('Nuevo chat'); }
+    renderHistory();
+    loadSession(current());
+
+    // ====== Chat ======
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const statusEl = document.getElementById('status');
+    const liveBadge = document.getElementById('liveBadge');
+
+    function addBubble(text, who='bot', sources=[]) {
+      const div = document.createElement('div');
+      div.className = `bubble ${who}`;
+      div.innerText = text;
+      if (sources && sources.length) {
+        const s = document.createElement('div');
+        s.className = 'sources';
+        s.innerHTML = '<b>Fuentes:</b><br>' + sources.map((x,i)=>`[${i+1}] ${x.source}${x.page? ' (p. '+x.page+')':''}`).join('<br>');
+        div.appendChild(s);
+      }
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setTyping(on){
+      statusEl.innerHTML = on ? `<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Pensando…</span>` : '';
+      liveBadge.textContent = on ? 'Generando…' : 'Listo';
+    }
+
+    async function chat(msg) {
+      setTyping(true);
+      sendBtn.disabled = true;
+      try{
+        const body = { message: msg, top_k: 6, history };
+        const r = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await r.json();
+        if (data.answer) {
+          addBubble(data.answer, 'bot', data.used_sources || []);
+          // Guardar en sesión
+          const s = current();
+          s.messages.push({ role:'user', content: msg });
+          s.messages.push({ role:'assistant', content: data.answer, sources: data.used_sources||[] });
+          if(!s.title || s.title==='Nuevo chat') s.title = msg.slice(0, 40);
+          persist();
+          renderHistory();
+        } else {
+          addBubble('Error al responder', 'bot');
+        }
+      }catch(err){
+        console.error(err);
+        addBubble('❌ Ocurrió un error de red o servidor.', 'bot');
+      }finally{
+        setTyping(false);
+        sendBtn.disabled = false;
+      }
+    }
+
+    function send(){
+      const msg = inputEl.value.trim();
+      if (!msg) return;
+      addBubble(msg, 'user');
+      const s = current();
+      s.messages.push({ role:'user', content: msg });
+      persist();
+      inputEl.value = '';
+      chat(msg);
+    }
+
+    sendBtn.onclick = send;
+    inputEl.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); }
+    });
+
+    // ====== Ingesta ======
+    const form = document.getElementById('ingestForm');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const msgEl = document.getElementById('ingestMsg');
+      msgEl.textContent = 'Subiendo…';
+      try{
+        const r = await fetch('/ingest', { method: 'POST', body: fd });
+        const data = await r.json();
+        if(data && typeof data.added_chunks !== 'undefined'){
+          msgEl.textContent = `✅ OK: ${data.added_chunks} chunks, total colección: ${data.collection_count}`;
+          msgEl.style.color = getComputedStyle(document.documentElement).getPropertyValue('--ok');
+        }else{
+          msgEl.textContent = 'No se pudo procesar la respuesta.';
+          msgEl.style.color = getComputedStyle(document.documentElement).getPropertyValue('--warn');
+        }
+      }catch(err){
+        msgEl.textContent = '❌ Error al subir el PDF.';
+        msgEl.style.color = getComputedStyle(document.documentElement).getPropertyValue('--error');
+      }
+    });
+  </script>
+</body>
+</html>
